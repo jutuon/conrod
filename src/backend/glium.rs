@@ -408,9 +408,26 @@ impl Renderer {
         }
     }
 
-    /// Fill the inner vertex and command buffers by translating the given `primitives`.
+    /// Convenience method for `Renderer::fill_non_glutin_window` method when using `glutin` window.
     pub fn fill<P, T>(&mut self,
                       display: &glium::Display,
+                      primitives: P,
+                      image_map: &image::Map<T>)
+        where P: render::PrimitiveWalker,
+              T: TextureDimensions,
+    {
+        let opengl_version = display.get_opengl_version();
+        let framebuffer_dimensions = display.get_framebuffer_dimensions();
+        let dpi_factor = display.gl_window().hidpi_factor() as Scalar;
+
+        self.fill_non_glutin_window(opengl_version, framebuffer_dimensions, dpi_factor, primitives, image_map);
+    }
+
+    /// Fill the inner vertex and command buffers by translating the given `primitives`.
+    pub fn fill_non_glutin_window<P, T>(&mut self,
+                      opengl_version: &glium::Version,
+                      (screen_w, screen_h): (u32, u32),
+                      dpi_factor: Scalar,
                       mut primitives: P,
                       image_map: &image::Map<T>)
         where P: render::PrimitiveWalker,
@@ -430,7 +447,6 @@ impl Renderer {
         let mut text_data_u8u8u8 = Vec::new();
 
         // Determine the texture format that we're using.
-        let opengl_version = display.get_opengl_version();
         let client_format = text_texture_client_format(opengl_version);
 
         enum State {
@@ -454,12 +470,9 @@ impl Renderer {
             };
         }
 
-        // Framebuffer dimensions and the "dots per inch" factor.
-        let (screen_w, screen_h) = display.get_framebuffer_dimensions();
         let (win_w, win_h) = (screen_w as Scalar, screen_h as Scalar);
         let half_win_w = win_w / 2.0;
         let half_win_h = win_h / 2.0;
-        let dpi_factor = display.gl_window().hidpi_factor() as Scalar;
 
         // Functions for converting for conrod scalar coords to GL vertex coords (-1.0 to 1.0).
         let vx = |x: Scalar| (x * dpi_factor / half_win_w) as f32;
